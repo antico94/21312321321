@@ -1,0 +1,2 @@
+logbook~=1.8.1
+sqlalchemy~=2.0.40
