@@ -4,7 +4,7 @@
 SQL_SERVER = r"localhost"
 SQL_DATABASE = "TestDB"
 SQL_DRIVER = "ODBC Driver 17 for SQL Server"
-USE_WINDOWS_AUTH = False
+USE_WINDOWS_AUTH = True
 SQL_USERNAME = "app_user"
 SQL_PASSWORD = "password01!"
 

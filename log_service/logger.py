@@ -2,12 +2,12 @@
 
 from typing import Optional, Dict, Any
 import sys
+import os
+import datetime
 import logbook
 from logbook import Logger, StreamHandler
-from logbook.ticketing import TicketingHandler
 from container import container
 from config.app_config import AppConfig, LoggingConfig
-from sqlalchemy.engine import URL
 
 
 class LoggingService:
@@ -16,18 +16,13 @@ class LoggingService:
     def __init__(self):
         self._initialized = False
         self._loggers: Dict[str, Logger] = {}
-        self._db_handler: Optional[TicketingHandler] = None
         self._console_handler: Optional[StreamHandler] = None
+        self._file = None
         self._config: Optional[LoggingConfig] = None
-
-    # log_service/logger.py
 
     def initialize(self) -> None:
         """
         Initialize the logging service
-
-        Raises:
-            Exception: If the logging system can't be properly initialized
         """
         if self._initialized:
             return
@@ -37,20 +32,13 @@ class LoggingService:
             app_config = container.resolve(AppConfig)
             self._config = app_config.logging
 
-            # Get SQLAlchemy URL and convert to string URI for TicketingHandler
-            sqlalchemy_url = container.resolve(URL)
+            # Create logs directory if it doesn't exist
+            log_dir = "logs"
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
 
-            # Convert SQLAlchemy URL to string URI format
-            # Example: "mssql+pyodbc://username:password@server/database?driver=ODBC+Driver+17+for+SQL+Server"
-            uri_string = str(sqlalchemy_url)
-
-            # Create TicketingHandler with URI string
-            self._db_handler = TicketingHandler(
-                uri=uri_string,
-                level=logbook.WARNING,  # Base level for DB logging
-                max_tickets=self._config.max_records
-            )
-            self._db_handler.push_application()
+            # Open log file
+            self._file = open(os.path.join(log_dir, "application.log"), "a", encoding="utf-8")
 
             # Set up console logging if enabled
             if self._config.console_output:
@@ -65,16 +53,6 @@ class LoggingService:
     def get_logger(self, component_name: str) -> Logger:
         """
         Get a logger for a specific component.
-
-        Args:
-            component_name: The name of the component requiring logging
-
-        Returns:
-            Logger: A configured logger instance
-
-        Raises:
-            Exception: If the logging system is not initialized
-            MissingComponentConfigError: If the component's configuration is not found
         """
         if not self._initialized:
             self.initialize()
@@ -101,17 +79,6 @@ class LoggingService:
     def log(self, level: str, component: str, message: str, **kwargs) -> None:
         """
         Log a message with the specified level and component.
-
-        Args:
-            level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-            component: Component name
-            message: Message to log
-            **kwargs: Additional data to include in the log
-
-        Raises:
-            Exception: If the logging system is not initialized
-            MissingComponentConfigError: If the component's configuration is not found
-            ValueError: If the log level is invalid
         """
         if not self._initialized:
             self.initialize()
@@ -126,30 +93,38 @@ class LoggingService:
         if level not in comp_config['enabled_levels']:
             return
 
-        # Get or create logger
+        # Get logger
         logger = self.get_logger(component)
 
-        # Add color if console output is enabled for this component
-        if comp_config['console_output']:
-            color_code = self._config.color_scheme.get(level, '')
-            reset_code = '\033[0m'
-            colored_message = f"{color_code}{message}{reset_code}"
-        else:
-            colored_message = message
+        # Format current time as HH:MM:SS
+        current_time = datetime.datetime.now().strftime('%H:%M:%S')
 
-        # Log with appropriate level
+        # Get color codes
+        color_code = self._config.color_scheme.get(level, '')
+        reset_code = '\033[0m'
+
+        # Format console message with colors
+        console_msg = f"[{current_time}] - {color_code}[{level}]{reset_code} - {component} - {color_code}{message}{reset_code}"
+
+        # Format file message without colors
+        file_msg = f"[{current_time}] - [{level}] - {component} - {message}\n"
+
+        # Write to file directly
+        if self._file:
+            self._file.write(file_msg)
+            self._file.flush()
+
+        # Log to console with standard logbook
         if level == 'DEBUG':
-            logger.debug(colored_message, **kwargs)
+            logger.debug(console_msg, **kwargs)
         elif level == 'INFO':
-            logger.info(colored_message, **kwargs)
+            logger.info(console_msg, **kwargs)
         elif level == 'WARNING':
-            logger.warning(colored_message, **kwargs)
+            logger.warning(console_msg, **kwargs)
         elif level == 'ERROR':
-            logger.error(colored_message, **kwargs)
+            logger.error(console_msg, **kwargs)
         elif level == 'CRITICAL':
-            logger.critical(colored_message, **kwargs)
-        else:
-            raise ValueError(f"Invalid log level: {level}")
+            logger.critical(console_msg, **kwargs)
 
 
 # Create an instance for dependency injection
