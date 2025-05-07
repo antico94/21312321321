@@ -80,6 +80,8 @@ class LoggingConfig:
         """
         Get configuration for a specific component.
 
+        Handles generically named strategy components by looking for partial matches.
+
         Args:
             component_name: The name of the component
 
@@ -87,12 +89,29 @@ class LoggingConfig:
             The component's configuration
 
         Raises:
-            MissingComponentConfigError: If the component's configuration is not found
+            Exception: If the component's configuration is not found
         """
-        if component_name not in self.component_configs:
+        # Exact match
+        if component_name in self.component_configs:
+            component_config = self.component_configs[component_name]
+        # Handle strategy components generically
+        elif component_name.startswith('strategy.'):
+            # Try to find a matching strategy config
+            # First try the exact generic strategy type (e.g. 'strategy.scalping_strategy')
+            strategy_type = component_name.split('.')[-1]
+            if f'strategy.{strategy_type}' in self.component_configs:
+                component_config = self.component_configs[f'strategy.{strategy_type}']
+            # Fallback to any strategy config
+            elif 'strategy.scalping_strategy' in self.component_configs:
+                component_config = self.component_configs['strategy.scalping_strategy']
+            else:
+                # Use default logging config for any strategy
+                component_config = {
+                    'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                    'console_output': True
+                }
+        else:
             raise Exception(f"No logging configuration found for component: {component_name}")
-
-        component_config = self.component_configs[component_name]
 
         # Validate component config
         if 'enabled_levels' not in component_config:

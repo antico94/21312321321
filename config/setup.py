@@ -160,7 +160,6 @@ def setup_configuration():
         sync_config=sync_config
     )
 
-    # Create logging config
     logging_config = LoggingConfig(
         max_records=10000,
         console_output=True,
@@ -196,6 +195,22 @@ def setup_configuration():
             'price_repository': {
                 'enabled_levels': {'WARNING', 'ERROR', 'CRITICAL'},
                 'console_output': False
+            },
+            'strategy_manager': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'trade_manager': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'strategy.scalping_strategy': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'trailing_stop_updater': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
             }
         }
     )
