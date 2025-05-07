@@ -11,6 +11,11 @@ from config.credentials import (
     USE_WINDOWS_AUTH, SQL_USERNAME, SQL_PASSWORD,
     MT5_SERVER, MT5_LOGIN, MT5_PASSWORD, MT5_TIMEOUT
 )
+from log_service.logger import LoggingService
+from mt5_service.connection import MT5ConnectionService
+from mt5_service.data_fetcher import MT5DataFetcher
+from mt5_service.data_sync import MT5DataSyncService
+from database.repository import PriceRepository
 
 
 def create_sqlalchemy_url() -> URL:
@@ -175,6 +180,22 @@ def setup_configuration():
             'trade_executor': {
                 'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
                 'console_output': True
+            },
+            'mt5_connection': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'data_sync': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'main': {
+                'enabled_levels': {'INFO', 'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': True
+            },
+            'price_repository': {
+                'enabled_levels': {'WARNING', 'ERROR', 'CRITICAL'},
+                'console_output': False
             }
         }
     )
@@ -194,4 +215,21 @@ def setup_configuration():
 
 def initialize_application():
     """Initialize all application components"""
+    # Set up configuration
     setup_configuration()
+
+    # Register services in container
+    logging_service = LoggingService()
+    container.register(LoggingService, logging_service)
+
+    mt5_connection_service = MT5ConnectionService()
+    container.register(MT5ConnectionService, mt5_connection_service)
+
+    mt5_data_fetcher = MT5DataFetcher()
+    container.register(MT5DataFetcher, mt5_data_fetcher)
+
+    mt5_data_sync_service = MT5DataSyncService()
+    container.register(MT5DataSyncService, mt5_data_sync_service)
+
+    price_repository = PriceRepository()
+    container.register(PriceRepository, price_repository)
